@@ -139,6 +139,28 @@ services:
     environment:
       - INSTANCE_TYPE=order-cancellation
 
+  # Component tests: run with ./bin/test.sh while the dev stack is up
+  tests:
+    image: glg-sse-interview-tests
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    volumes:
+      - ./app/src:/usr/src/app/src
+      - ./pipeline/src:/usr/src/pipeline/src
+      - ./tests:/usr/src/tests
+      - /usr/src/tests/node_modules
+    env_file:
+      - ./etc/dev.env
+    # A separate stage keeps test data out of the dev tables the running workers use
+    environment:
+      - STAGE=test
+      - DYNAMO_TABLE_ORDERS=orders-test
+      - DYNAMO_TABLE_DEAD_LETTERS=dead-letters-test
+      - RECEIPT_DIRECTORY_PATH=/tmp/receipts
+      - LOG_LEVEL=warn
+
 volumes:
   dynamodb_data:
   sqs_data:

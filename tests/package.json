@@ -1,0 +1,13 @@
+{
+  "name": "glg-sse-interview-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Component tests for order cancellation, run inside the docker compose network",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "2.1.9"
+  }
+}
