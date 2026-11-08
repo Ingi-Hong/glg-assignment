@@ -37,13 +37,17 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   itemName: {
-    width: '50%',
+    width: '40%',
   },
   itemQuantity: {
-    width: '25%',
+    width: '15%',
     textAlign: 'center',
   },
   itemPrice: {
+    width: '20%',
+    textAlign: 'right',
+  },
+  itemLineTotal: {
     width: '25%',
     textAlign: 'right',
   },
@@ -59,6 +63,7 @@ const styles = StyleSheet.create({
 });
 
 export const ReceiptDocument: React.FC<{ order: Order }> = ({ order }) => {
+
   return (
     <Document>
       <Page style={styles.page}>
@@ -68,8 +73,8 @@ export const ReceiptDocument: React.FC<{ order: Order }> = ({ order }) => {
         {/* Order Information */}
         <View style={styles.orderInfo}>
           <Text>Order ID: {order.orderId}</Text>
+          <Text>Reference ID: {order.referenceId}</Text>
           <Text>Date: {new Date(order.createdAt).toLocaleDateString()}</Text>
-          <Text>Status: {order.status}</Text>
         </View>
 
         {/* Customer Information */}
@@ -88,7 +93,8 @@ export const ReceiptDocument: React.FC<{ order: Order }> = ({ order }) => {
         <View style={styles.tableHeader}>
           <Text style={styles.itemName}>Item</Text>
           <Text style={styles.itemQuantity}>Quantity</Text>
-          <Text style={styles.itemPrice}>Price</Text>
+          <Text style={styles.itemPrice}>Unit Price</Text>
+          <Text style={styles.itemLineTotal}>Line Total</Text>
         </View>
 
         {/* Items */}
@@ -97,13 +103,14 @@ export const ReceiptDocument: React.FC<{ order: Order }> = ({ order }) => {
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.itemQuantity}>{item.quantity}</Text>
             <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+            <Text style={styles.itemLineTotal}>${item.lineTotal.toFixed(2)}</Text>
           </View>
         ))}
 
         {/* Total Amount */}
         <View style={styles.total}>
           <Text style={styles.totalLabel}>Total Amount:</Text>
-          <Text>${order.amount.toFixed(2)}</Text>
+          <Text>${order.details?.amount.toFixed(2)}</Text>
         </View>
       </Page>
     </Document>

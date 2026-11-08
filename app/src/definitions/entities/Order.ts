@@ -6,7 +6,6 @@ import { OrderDetails } from "./OrderDetails";
 export interface Order {
   orderId: string;
   userId: string;
-  amount: number;
   referenceId: string;
   status: OrderStatus;
   createdAt: number;
@@ -17,12 +16,11 @@ export interface Order {
 }
 
 export class OrderFactory {
-  public static createOrder(params: Pick<Order, "userId" | "referenceId" | "amount">): Order {
+  public static createOrder(params: Pick<Order, "userId" | "referenceId">): Order {
     return {
       orderId: randomUUID(),
       userId: params.userId,
       referenceId: params.referenceId,
-      amount: params.amount,
       status: OrderStatus.PROCESSING,
       createdAt: Date.now(),
       updatedAt: Date.now(),

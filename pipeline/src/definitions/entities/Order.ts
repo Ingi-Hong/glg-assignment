@@ -4,7 +4,6 @@ import { OrderDetails } from "./OrderDetails";
 export interface Order {
   orderId: string;
   userId: string;
-  amount: number;
   referenceId: string;
   status: OrderStatus;
   createdAt: number;

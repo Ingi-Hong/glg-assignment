@@ -17,7 +17,7 @@ export class OrderIntakeInstance extends QueueInstance<OrderMessage> {
   }
 
   /**
-   * Generate random order details and update the order in the database.
+   * Generate random order details, set the order's amount to their order total, and update the order in the database.
    * @param message
    * @protected
    */

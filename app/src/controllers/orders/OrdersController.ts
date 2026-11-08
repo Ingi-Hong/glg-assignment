@@ -171,7 +171,10 @@ export class OrdersController extends Controller {
     *                  description: The reference ID for the order.
     *                amount:
     *                  type: number
-    *                  description: The amount of the order.
+    *                  nullable: true
+    *                  deprecated: true
+    *                  description: >-
+    *                    Deprecated. Any value sent is ignored.
     *      produces:
     *        - application/json
     *      responses:
@@ -184,14 +187,14 @@ export class OrdersController extends Controller {
     */
   public async createOrder(req: Request, res: Response): Promise<void> {
     try {
-      const { userId, referenceId, amount } = req.body;
+      const { userId, referenceId } = req.body;
       const existing = await OrdersDatabase.getOrderByReferenceId(referenceId);
       if (existing) {
         res.status(400).json({ success: false, message: "ORDER_ALREADY_EXISTS" });
         return;
       }
 
-      const order = OrderFactory.createOrder({ userId, referenceId, amount });
+      const order = OrderFactory.createOrder({ userId, referenceId });
       await OrdersDatabase.createOrder(order);
 
       await SimpleQueueService.sendMessage(SQS_ORDER_INTAKE_QUEUE_NAME, "Placing order from API", { orderId: order.orderId });

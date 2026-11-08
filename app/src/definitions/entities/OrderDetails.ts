@@ -14,5 +14,7 @@ export interface OrderDetails {
     name: string;
     quantity: number;
     price: number;
+    lineTotal: number;
   }[];
+  amount: number;
 }
