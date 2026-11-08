@@ -10,6 +10,7 @@ import { ProjectSetupInstance } from "../impl/ProjectSetupInstance";
 import { OrderIntakeInstance } from "../impl/OrderIntakeInstance";
 import { OrderProcessorInstance } from "../impl/OrderProcessorInstance";
 import { OrderEmailerInstance } from "../impl/OrderEmailerInstance";
+import { OrderCancellationInstance } from "../impl/OrderCancellationInstance";
 import { DeadLetterInstance } from "../impl/DeadLetterInstance";
 
 const { INSTANCE_TYPE } = process.env;
@@ -50,6 +51,7 @@ export class InstanceManager extends EventEmitter {
     registry.set(InstanceType.ORDER_INTAKE, OrderIntakeInstance.prototype);
     registry.set(InstanceType.ORDER_PROCESSOR, OrderProcessorInstance.prototype);
     registry.set(InstanceType.ORDER_EMAILER, OrderEmailerInstance.prototype);
+    registry.set(InstanceType.ORDER_CANCELLATION, OrderCancellationInstance.prototype);
     registry.set(InstanceType.DEAD_LETTER_QUEUE, DeadLetterInstance.prototype);
     return registry;
   }

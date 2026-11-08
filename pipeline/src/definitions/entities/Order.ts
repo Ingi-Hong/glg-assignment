@@ -11,6 +11,7 @@ export interface Order {
   receiptFilePath?: string;
   details?: OrderDetails;
   completedAt?: number;
+  cancelProcessedAt?: number;
 }
 
 export type MutableOrderFields = Partial<Pick<Order, "receiptFilePath" | "details" | "updatedAt" | "completedAt" | "status">>

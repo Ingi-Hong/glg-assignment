@@ -3,12 +3,8 @@ export enum OrderStatus {
   CANCELLED = 'cancelled',
   ERROR = 'error',
   PROCESSING = 'processing',
+  SENDING_RECEIPT = 'sending_receipt',
 }
 
-export const getOrderStatus = (status: string): OrderStatus | undefined => {
-  Object.values(OrderStatus).forEach((orderStatus) => {
-    if (orderStatus === status) return orderStatus;
-  });
-
-  return undefined;
-}
+export const getOrderStatus = (status: string): OrderStatus | undefined =>
+  Object.values(OrderStatus).find((orderStatus) => orderStatus === status);

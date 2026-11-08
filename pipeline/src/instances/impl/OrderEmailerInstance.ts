@@ -1,4 +1,4 @@
-import { promises as fs } from "fs";
+import { existsSync, promises as fs } from "fs";
 
 import { QueueInstance } from "../classes/QueueInstance";
 import { OrderMessage } from "../../definitions/messages/OrderMessage";
@@ -26,28 +26,36 @@ export class OrderEmailerInstance extends QueueInstance<OrderMessage> {
     const order = await OrdersDatabase.getOrderById(orderId);
 
     if (!order) throw new Error(`Order not found: ${orderId}`);
-    if (order.status !== OrderStatus.PROCESSING) {
-      this.logger.warn(`Order ${orderId} is not in PROCESSING state`);
+    /* SENDING_RECEIPT means a previous attempt claimed the receipt but did not finish; retry the send */
+    if (order.status !== OrderStatus.PROCESSING && order.status !== OrderStatus.SENDING_RECEIPT) {
+      this.logger.warn(`Order ${orderId} is not in PROCESSING or SENDING_RECEIPT state`);
       return;
     }
 
-    if (!order.receiptFilePath) {
-      this.logger.warn(`Order ${orderId} does not have a receipt file path`);
-      return;
-    }
+    /* The processor sets receiptFilePath before queueing this message, so a missing one is a fault: retry, then dead-letter */
+    if (!order.receiptFilePath) throw new Error(`Order ${orderId} does not have a receipt file path`);
 
-    // Read the receipt file into a buffer
     const receipt = await fs.readFile(order.receiptFilePath);
-    await EmailService.sendEmail({
-      order,
-      receipt,
-    });
+    const email = EmailService.buildReceiptEmail(order, receipt);
 
+    // Past this claim the order can no longer be cancelled
+    if (!(await OrdersDatabase.claimReceipt(orderId))) {
+      this.logger.info(`Order ${orderId} was cancelled before its receipt was claimed; receipt not sent`);
+      return;
+    }
+
+    await EmailService.sendEmail(email);
     this.logger.info(`Order ${orderId} email sent`);
 
-    await OrdersDatabase.update(order.orderId, { status: OrderStatus.COMPLETED, completedAt: Date.now() });
-    await fs.unlink(order.receiptFilePath);
-    
-    this.logger.info(`Order ${orderId} status updated`);
+    if (!(await OrdersDatabase.completeOrder(orderId))) {
+      this.logger.error(`Order ${orderId} left SENDING_RECEIPT while its receipt was being sent; not completed`);
+    }
+    else {
+      this.logger.info(`Order ${orderId} status updated`);
+    }
+
+    if (existsSync(order.receiptFilePath)) {
+      await fs.unlink(order.receiptFilePath);
+    }
   }
 }

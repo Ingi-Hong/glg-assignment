@@ -1,5 +1,6 @@
 import {
   AttributeValue,
+  ConditionalCheckFailedException,
   GetItemCommand,
   UpdateItemCommand
 } from "@aws-sdk/client-dynamodb";
@@ -7,6 +8,7 @@ import {
 import { unmarshall, marshall } from "@aws-sdk/util-dynamodb";
 
 import { MutableOrderFields, Order } from "../definitions/entities/Order";
+import { OrderStatus } from "../definitions/enums/OrderStatus";
 import { DynamoService } from "../services/dynamo/DynamoService";
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 
@@ -95,5 +97,98 @@ export class OrdersDatabase {
 
     const dynamo = DynamoService.getClient();
     await dynamo.send(command);
+  }
+
+  /**
+   * Claim an order's receipt before sending it: move it to SENDING_RECEIPT, after which the API refuses to
+   * cancel it. Re-claiming an order already in SENDING_RECEIPT succeeds, so an SQS retry can resend.
+   * Returns false if the order was cancelled (or otherwise left PROCESSING) before the claim.
+   */
+  public static async claimReceipt(orderId: string): Promise<boolean> {
+    if (!DYNAMO_TABLE_ORDERS) throw new Error("DYNAMO_TABLE_ORDERS is not defined");
+
+    const command = new UpdateItemCommand({
+      TableName: DYNAMO_TABLE_ORDERS,
+      Key: { orderId: { S: orderId } },
+      UpdateExpression: "SET #status = :sending, updatedAt = :now",
+      ConditionExpression: "#status IN (:processing, :sending)",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: {
+        ":sending": { S: OrderStatus.SENDING_RECEIPT },
+        ":processing": { S: OrderStatus.PROCESSING },
+        ":now": { N: `${Date.now()}` },
+      },
+    });
+
+    try {
+      await DynamoService.getClient().send(command);
+      return true;
+    }
+    catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return false;
+      throw error;
+    }
+  }
+
+  /**
+   * Move an order whose receipt has been sent from SENDING_RECEIPT to COMPLETED.
+   * Returns false if the order was not in SENDING_RECEIPT.
+   */
+  public static async completeOrder(orderId: string): Promise<boolean> {
+    if (!DYNAMO_TABLE_ORDERS) throw new Error("DYNAMO_TABLE_ORDERS is not defined");
+
+    const now = Date.now();
+    const command = new UpdateItemCommand({
+      TableName: DYNAMO_TABLE_ORDERS,
+      Key: { orderId: { S: orderId } },
+      UpdateExpression: "SET #status = :completed, completedAt = :now, updatedAt = :now",
+      ConditionExpression: "#status = :sending",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: {
+        ":completed": { S: OrderStatus.COMPLETED },
+        ":sending": { S: OrderStatus.SENDING_RECEIPT },
+        ":now": { N: `${now}` },
+      },
+    });
+
+    try {
+      await DynamoService.getClient().send(command);
+      return true;
+    }
+    catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return false;
+      throw error;
+    }
+  }
+
+  /**
+   * Record that a cancelled order's cancellation has been processed (customer emailed, receipt removed)
+   * by setting cancelProcessedAt. Once set, the API allows the order to be deleted.
+   * Returns false if the order is no longer CANCELLED or cancelProcessedAt was already set.
+   */
+  public static async markCancellationProcessed(orderId: string): Promise<boolean> {
+    if (!DYNAMO_TABLE_ORDERS) throw new Error("DYNAMO_TABLE_ORDERS is not defined");
+
+    const now = Date.now();
+    const command = new UpdateItemCommand({
+      TableName: DYNAMO_TABLE_ORDERS,
+      Key: { orderId: { S: orderId } },
+      UpdateExpression: "SET cancelProcessedAt = :now, updatedAt = :now",
+      ConditionExpression: "#status = :cancelled AND attribute_not_exists(cancelProcessedAt)",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: {
+        ":cancelled": { S: OrderStatus.CANCELLED },
+        ":now": { N: `${now}` },
+      },
+    });
+
+    try {
+      await DynamoService.getClient().send(command);
+      return true;
+    }
+    catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return false;
+      throw error;
+    }
   }
 }

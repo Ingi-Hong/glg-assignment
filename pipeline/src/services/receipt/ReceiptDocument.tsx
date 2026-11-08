@@ -63,7 +63,6 @@ const styles = StyleSheet.create({
 });
 
 export const ReceiptDocument: React.FC<{ order: Order }> = ({ order }) => {
-
   return (
     <Document>
       <Page style={styles.page}>

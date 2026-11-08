@@ -121,6 +121,24 @@ services:
     environment:
       - INSTANCE_TYPE=order-emailer
 
+  order-cancellation:
+    image: glg-sse-interview-pipeline
+    profiles: ["dev"]
+    tty: true
+    build:
+      context: ./pipeline
+      dockerfile: Dockerfile
+    volumes:
+      - ./pipeline/:/usr/src/app
+      - /usr/src/app/node_modules
+      - ./tmp:/otmp
+    env_file:
+      - ./etc/dev.env
+    depends_on:
+      - dynamodb
+    environment:
+      - INSTANCE_TYPE=order-cancellation
+
 volumes:
   dynamodb_data:
   sqs_data:

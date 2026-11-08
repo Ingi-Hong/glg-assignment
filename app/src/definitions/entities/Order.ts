@@ -13,6 +13,7 @@ export interface Order {
   receiptFilePath?: string;
   details?: OrderDetails;
   completedAt?: number;
+  cancelProcessedAt?: number;
 }
 
 export class OrderFactory {
